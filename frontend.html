@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Chatbot UI</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
+        #chatbox { width: 100%; height: 400px; background: white; padding: 10px; overflow-y: auto; border: 1px solid #ccc; }
+        #user-input { width: 80%; padding: 10px; }
+        #send-btn { padding: 10px 20px; }
+        .message { margin: 10px 0; }
+        .user { color: blue; }
+        .bot { color: green; }
+    </style>
+</head>
+<body>
+    <h2>Customer Support Chatbot</h2>
+    <div id="chatbox"></div>
+    <input type="text" id="user-input" placeholder="Ask something like 'Top 5 products'...">
+    <button id="send-btn">Send</button>
+
+    <script>
+        const chatbox = document.getElementById('chatbox');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+
+        sendBtn.onclick = async () => {
+            const msg = userInput.value.trim();
+            if (!msg) return;
+            appendMessage('You', msg, 'user');
+            userInput.value = '';
+
+            let response = 'Sorry, I didn\'t understand that.';
+            try {
+                if (msg.toLowerCase().includes('top 5')) {
+                    const res = await fetch('http://localhost:8080/api/chatbot/top-products');
+                    const data = await res.json();
+                    response = 'Top 5 products:\n' + data.map(p => p.name + ' (Sold: ' + p.quantitySold + ')').join('\n');
+                } else if (msg.toLowerCase().includes('order')) {
+                    const id = msg.match(/\d+/)?.[0];
+                    const res = await fetch(`http://localhost:8080/api/chatbot/order-status/${id}`);
+                    response = await res.text();
+                } else if (msg.toLowerCase().includes('stock')) {
+                    const name = msg.split('stock of ')[1]?.trim() || 'classic-tshirt';
+                    const res = await fetch(`http://localhost:8080/api/chatbot/stock?name=${name}`);
+                    response = await res.text();
+                }
+            } catch (e) {
+                response = 'Error connecting to server.';
+            }
+
+            appendMessage('Bot', response, 'bot');
+        };
+
+        function appendMessage(sender, text, className) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'message ' + className;
+            msgDiv.textContent = `${sender}: ${text}`;
+            chatbox.appendChild(msgDiv);
+            chatbox.scrollTop = chatbox.scrollHeight;
+        }
+    </script>
+</body>
+</html>
